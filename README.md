@@ -8,99 +8,68 @@ Standalone **Cursor agent kit** for Bitbucket Cloud pull requests:
 
 GitKraken MCP can read PRs/diffs, but it cannot post line comments or Request changes. This kit publishes through the **Bitbucket REST API** (`scripts/publish-review.mjs`).
 
-## Quick start
+## Credentials (host project only)
 
-```bash
-cd bitbucket-inline-review-agent
-cp .env.example .env
-# Edit .env: BITBUCKET_USERNAME + BITBUCKET_APP_PASSWORD (Pull requests Read/Write)
+This kit is reusable — **never** store API tokens in the kit repo.
+
+Add to the **product** env (e.g. `dealer-platform` → `env/.env.development`):
+
+```env
+BITBUCKET_USERNAME=you@company.com
+BITBUCKET_API_TOKEN=ATATT...
+BITBUCKET_WORKSPACE=project-jakarta
+BITBUCKET_REPO_SLUG=dealer-platform
 ```
 
-Dry-run with the sample findings:
+Template: [`examples/host-project.env.example`](examples/host-project.env.example).
+
+Create the token at [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) with pullrequest read/write scopes. (App passwords are deprecated.)
+
+## Publish
+
+Run from the **product repo** (so env discovery finds `env/.env.*`), pointing at the kit script:
 
 ```bash
-node scripts/publish-review.mjs --pr 88 --findings ./examples/findings.example.json --dry-run
+cd /path/to/dealer-platform/code
+node /path/to/bitbucket-inline-review-agent/scripts/publish-review.mjs \
+  --pr 88 --findings ./findings.json --dry-run
 ```
 
-Publish for real:
+Or pass the env file explicitly:
 
 ```bash
-node scripts/publish-review.mjs --pr 88 --findings ./findings.json
+node .../publish-review.mjs --env-file ./env/.env.development --pr 88 --findings ./findings.json
 ```
 
 ## Use in Cursor
 
-### Option A — open this folder as the workspace
+### Option A — multi-root / product workspace + kit on disk
 
-Open this repo in Cursor and ask e.g.:
+Work in the product repo; agent runs the kit script with host cwd / `--env-file`.
 
-- `inline review PR 88`
-- `zrób review z komentarzami do linii DP-1421`
-- then `wrzuć inline na PR`
-
-The rule/skill under `.cursor/` will guide the agent.
-
-### Option B — personal skill (any product repo)
-
-Copy or junction the skill into your user skills:
+### Option B — personal skill junction
 
 ```powershell
-# Windows (junction)
 New-Item -ItemType Junction `
   -Path "$env:USERPROFILE\.cursor\skills\bitbucket-inline-review-agent" `
   -Target "C:\Users\Szymon\Desktop\bitbucket-inline-review-agent\.cursor\skills\bitbucket-inline-review-agent"
 ```
 
-Keep the **kit root** (with `scripts/` and `.env`) available; the agent must run `node scripts/publish-review.mjs` from that root (or pass absolute paths).
-
-### Option C — multi-root workspace
-
-Add this folder next to your product repo in a `.code-workspace` so the skill and scripts are both visible.
+Credentials still come from the product project env, not the kit.
 
 ## Findings JSON
 
-See `examples/findings.example.json`:
-
-```json
-{
-  "ticket": "DP-123",
-  "verdict": "Request changes",
-  "requestChanges": true,
-  "findings": [
-    {
-      "severity": "Critical",
-      "path": "ui/src/views/example/Example.vue",
-      "line": 42,
-      "title": "Missing null guard",
-      "problem": "…",
-      "solution": "…"
-    }
-  ]
-}
-```
-
-- `line` = line in the **new** file version (`inline.to` in the API)
-- Critical / `requestChanges: true` → script calls `POST .../request-changes`
-- `--approve` only when you intentionally approve a clean PR
+See `examples/findings.example.json`. Critical → Request changes; `--approve` only for clean PRs when asked.
 
 ## Layout
 
 ```
 .cursor/skills/bitbucket-inline-review-agent/   # agent instructions
-.cursor/rules/bitbucket-inline-review.mdc
-scripts/publish-review.mjs                      # Bitbucket API publisher
-config/defaults.json
-examples/findings.example.json
+scripts/publish-review.mjs                      # publisher (reads host env)
+examples/host-project.env.example               # copy into product env
+config/defaults.json                            # non-secret defaults only
 ```
-
-## Defaults
-
-`config/defaults.json` targets `project-jakarta` / `dealer-platform`. Override with `--workspace` / `--repo` or env vars.
 
 ## Security
 
-Never commit `.env`. App passwords are user-scoped; revoke if leaked.
-
-## Related
-
-Product-repo chat-only Bitbucket review (no inline API): `bitbucket-review-agent` inside dealer-platform.
+Never commit `BITBUCKET_API_TOKEN`. Prefer gitignored project env files (`env/.env.development`).

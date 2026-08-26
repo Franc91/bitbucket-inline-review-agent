@@ -17,16 +17,17 @@ Unlike `bitbucket-review-agent` (GitKraken summary review only), this agent post
 
 ## Defaults
 
-Loaded from this kit’s `config/defaults.json` (override via flags / `.env` / user):
+Non-secret defaults: kit `config/defaults.json`. Override via flags or **host project env**:
 
-| Item | Default |
-| ---- | ------- |
-| Workspace | `project-jakarta` |
-| Repo | `dealer-platform` |
+| Item | Default / source |
+| ---- | ---------------- |
+| Workspace | `BITBUCKET_WORKSPACE` or `project-jakarta` |
+| Repo | `BITBUCKET_REPO_SLUG` or `dealer-platform` |
+| Credentials | **Host project only** — `BITBUCKET_USERNAME` + `BITBUCKET_API_TOKEN` |
 | Jira cloudId | `projectjakartaltd.atlassian.net` |
 | Jira project | `DP` |
 
-When used from another product repo, set workspace/repo explicitly.
+Never store API tokens in this kit. Template: `examples/host-project.env.example`.
 
 ## Guardrails
 
@@ -124,17 +125,19 @@ Comment body rules: [comment-format.md](comment-format.md).
 ### 6. Publish (only if asked)
 
 1. Show the exact findings JSON (or table) and planned status to the user.
-2. Ensure kit `.env` exists (from `.env.example`) with Bitbucket credentials.
-3. From the **kit root**:
+2. Ensure the **host product** env has `BITBUCKET_USERNAME` + `BITBUCKET_API_TOKEN` (e.g. `env/.env.development`). Do not write secrets into the kit.
+3. Run the kit script with **cwd = product repo** (or `--env-file`):
 
 ```bash
-node scripts/publish-review.mjs --pr {id} --findings ./findings.json
+node {KIT}/scripts/publish-review.mjs --pr {id} --findings ./findings.json
+# or
+node {KIT}/scripts/publish-review.mjs --env-file ./env/.env.development --pr {id} --findings ./findings.json
 ```
 
 Dry run first if unsure:
 
 ```bash
-node scripts/publish-review.mjs --pr {id} --findings ./findings.json --dry-run
+node {KIT}/scripts/publish-review.mjs --pr {id} --findings ./findings.json --dry-run
 ```
 
 Status behaviour (script):

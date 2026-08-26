@@ -2,15 +2,19 @@
 /**
  * Publish Bitbucket PR inline review findings.
  *
- * Usage:
- *   node scripts/publish-review.mjs --pr 88 --findings ./findings.json
- *   node scripts/publish-review.mjs --pr 88 --findings ./findings.json --dry-run
- *   node scripts/publish-review.mjs --pr 88 --findings ./findings.json --approve
+ * Credentials come from the **host project** env (never from this kit repo):
+ *   BITBUCKET_USERNAME (Atlassian email) + BITBUCKET_API_TOKEN  (Basic)
+ *   aliases: BITBUCKET_EMAIL, BITBUCKET_APP_PASSWORD
+ *   or BITBUCKET_TOKEN (Bearer OAuth access token)
+ *   BITBUCKET_WORKSPACE, BITBUCKET_REPO_SLUG (optional)
  *
- * Env (.env next to package root or process env):
- *   BITBUCKET_USERNAME + BITBUCKET_APP_PASSWORD  (Basic)
- *   or BITBUCKET_TOKEN (Bearer)
- *   BITBUCKET_WORKSPACE, BITBUCKET_REPO_SLUG (optional overrides)
+ * Env file discovery (does not overwrite existing process.env):
+ *   1. --env-file <path>
+ *   2. walk up from cwd: .env, .env.local, env/.env.development, env/.env.default
+ *
+ * Usage (run from product repo, or pass --env-file):
+ *   node /path/to/kit/scripts/publish-review.mjs --pr 88 --findings ./findings.json
+ *   node ... --env-file ./env/.env.development --pr 88 --findings ./findings.json
  */
 
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
@@ -21,7 +25,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
 function loadDotEnv(path) {
-  if (!existsSync(path)) return;
+  if (!path || !existsSync(path)) return false;
   const text = readFileSync(path, "utf8");
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -38,16 +42,48 @@ function loadDotEnv(path) {
     }
     if (process.env[key] === undefined) process.env[key] = val;
   }
+  return true;
 }
 
-loadDotEnv(join(ROOT, ".env"));
+/** Walk cwd → parents; load first matching env files (shallow names first per dir). */
+function loadHostProjectEnv(startDir) {
+  const names = [
+    ".env",
+    ".env.local",
+    join("env", ".env.development"),
+    join("env", ".env.default"),
+  ];
+  const loaded = [];
+  let dir = resolve(startDir);
+  for (let i = 0; i < 12; i++) {
+    for (const name of names) {
+      const p = join(dir, name);
+      if (loadDotEnv(p)) loaded.push(p);
+    }
+    if (process.env.BITBUCKET_API_TOKEN || process.env.BITBUCKET_APP_PASSWORD || process.env.BITBUCKET_TOKEN) {
+      break;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return loaded;
+}
+
+function peekEnvFileArg(argv) {
+  for (let i = 2; i < argv.length; i++) {
+    if (argv[i] === "--env-file") return argv[i + 1] || null;
+  }
+  return null;
+}
 
 function parseArgs(argv) {
   const out = {
     pr: null,
     findings: null,
-    workspace: process.env.BITBUCKET_WORKSPACE || null,
-    repo: process.env.BITBUCKET_REPO_SLUG || null,
+    workspace: null,
+    repo: null,
+    envFile: null,
     dryRun: false,
     approve: false,
     skipStatus: false,
@@ -68,6 +104,9 @@ function parseArgs(argv) {
         break;
       case "--repo":
         out.repo = next();
+        break;
+      case "--env-file":
+        out.envFile = next();
         break;
       case "--dry-run":
         out.dryRun = true;
@@ -101,12 +140,17 @@ Required:
   --findings <path>      JSON findings file (see examples/findings.example.json)
 
 Optional:
-  --workspace <slug>     default from .env / config
-  --repo <slug>          default from .env / config
+  --env-file <path>      host project env file (API token lives here, not in the kit)
+  --workspace <slug>     default from host env / config
+  --repo <slug>          default from host env / config
   --dry-run              print actions only
   --approve              set Approve (only if verdict allows)
   --skip-status          do not call request-changes / approve
   --summary-only         post only the summary comment (no inline)
+
+Credentials (host project env only):
+  BITBUCKET_USERNAME or BITBUCKET_EMAIL  +  BITBUCKET_API_TOKEN
+  (BITBUCKET_APP_PASSWORD still accepted as alias for the API token)
 `);
 }
 
@@ -121,14 +165,26 @@ function loadDefaults() {
   return JSON.parse(readFileSync(p, "utf8"));
 }
 
+function bitbucketUser() {
+  return process.env.BITBUCKET_USERNAME || process.env.BITBUCKET_EMAIL || "";
+}
+
+function bitbucketSecret() {
+  return (
+    process.env.BITBUCKET_API_TOKEN ||
+    process.env.BITBUCKET_APP_PASSWORD ||
+    ""
+  );
+}
+
 function authHeader() {
-  const token = process.env.BITBUCKET_TOKEN;
-  if (token) return `Bearer ${token}`;
-  const user = process.env.BITBUCKET_USERNAME;
-  const pass = process.env.BITBUCKET_APP_PASSWORD;
+  const bearer = process.env.BITBUCKET_TOKEN;
+  if (bearer) return `Bearer ${bearer}`;
+  const user = bitbucketUser();
+  const pass = bitbucketSecret();
   if (!user || !pass) {
     fail(
-      "Set BITBUCKET_TOKEN or BITBUCKET_USERNAME + BITBUCKET_APP_PASSWORD (see .env.example)",
+      "Missing Bitbucket credentials in host project env. Set BITBUCKET_USERNAME (Atlassian email) + BITBUCKET_API_TOKEN, or pass --env-file pointing at the product .env (see examples/host-project.env.example).",
     );
   }
   return `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`;
@@ -215,14 +271,31 @@ async function approve(base) {
 }
 
 async function main() {
+  // Load host-project env before reading BITBUCKET_* (never load kit-root .env).
+  const earlyEnvFile = peekEnvFileArg(process.argv);
+  if (earlyEnvFile) {
+    const abs = resolve(process.cwd(), earlyEnvFile);
+    if (!loadDotEnv(abs)) fail(`--env-file not found: ${abs}`);
+    console.log(`Loaded env file: ${abs}`);
+  } else {
+    const loaded = loadHostProjectEnv(process.cwd());
+    if (loaded.length) console.log(`Loaded host env: ${loaded.join(", ")}`);
+  }
+
   const args = parseArgs(process.argv);
   const defaults = loadDefaults();
-  const workspace = args.workspace || defaults.workspace;
-  const repo = args.repo || defaults.repoSlug;
+  const workspace =
+    args.workspace || process.env.BITBUCKET_WORKSPACE || defaults.workspace;
+  const repo =
+    args.repo || process.env.BITBUCKET_REPO_SLUG || defaults.repoSlug;
 
   if (!args.pr) fail("--pr is required");
   if (!args.findings) fail("--findings is required");
-  if (!workspace || !repo) fail("workspace/repo missing (flags, .env, or config/defaults.json)");
+  if (!workspace || !repo) {
+    fail(
+      "workspace/repo missing (flags, host project env BITBUCKET_WORKSPACE / BITBUCKET_REPO_SLUG, or config/defaults.json)",
+    );
+  }
 
   const findingsPath = resolve(process.cwd(), args.findings);
   if (!existsSync(findingsPath)) fail(`findings file not found: ${findingsPath}`);

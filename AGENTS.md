@@ -8,10 +8,13 @@ Standalone Cursor kit for **Bitbucket PR inline review**.
 | Publish API details | [.cursor/skills/bitbucket-inline-review-agent/api.md](.cursor/skills/bitbucket-inline-review-agent/api.md) |
 | Comment wording | [.cursor/skills/bitbucket-inline-review-agent/comment-format.md](.cursor/skills/bitbucket-inline-review-agent/comment-format.md) |
 
-**Publish command** (after user asks):
+**Publish command** (after user asks; credentials from **host** `env/.env.*`, not the kit):
 
 ```bash
-node scripts/publish-review.mjs --pr {id} --findings ./findings.json
+node {path-to-kit}/scripts/publish-review.mjs --pr {id} --findings ./findings.json
+# preferred when not running from product cwd:
+node {path-to-kit}/scripts/publish-review.mjs --env-file ./env/.env.development --pr {id} --findings ./findings.json
 ```
 
 Do not modify product application code from this kit’s review workflow.
+Do not store Bitbucket tokens in the kit repository.
