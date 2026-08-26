@@ -1,0 +1,7 @@
+{
+  "workspace": "project-jakarta",
+  "repoSlug": "dealer-platform",
+  "jiraCloudId": "projectjakartaltd.atlassian.net",
+  "jiraProject": "DP",
+  "prUrlTemplate": "https://bitbucket.org/{workspace}/{repoSlug}/pull-requests/{id}"
+}

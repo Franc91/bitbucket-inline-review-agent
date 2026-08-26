@@ -1,0 +1,14 @@
+{
+  "name": "bitbucket-inline-review-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cursor agent kit: Bitbucket PR review with inline comments and Request changes",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "publish": "node scripts/publish-review.mjs",
+    "dry-run": "node scripts/publish-review.mjs --dry-run"
+  }
+}

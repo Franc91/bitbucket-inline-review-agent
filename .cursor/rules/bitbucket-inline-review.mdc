@@ -1,0 +1,10 @@
+---
+description: Bitbucket PR inline review — line comments + Request changes. Polish — inline review, komentarze do linii, request changes, wrzuć inline.
+alwaysApply: false
+---
+
+# Bitbucket inline review
+
+When the user wants a Bitbucket PR review with **comments on specific lines** and/or **Request changes** status → follow [.cursor/skills/bitbucket-inline-review-agent/SKILL.md](../skills/bitbucket-inline-review-agent/SKILL.md).
+
+Publish only via `scripts/publish-review.mjs` after the user asks to publish.
