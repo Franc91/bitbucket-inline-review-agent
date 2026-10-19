@@ -66,11 +66,13 @@ Global Cursor skill (all projects; kit path in `%USERPROFILE%\.cursor\bitbucket-
 .\install.ps1 -Global
 ```
 
-After `git pull` in this kit:
+After changes in this kit repo:
 
 ```powershell
 .\update.ps1
 ```
+
+`update.ps1` always **git pull**s the kit. It **re-installs** into the product only if `install.config.json` exists, you pass `-TargetPath`, or `-Global`. Without config you get a hint — not an error. Pull only: `.\update.ps1 -PullOnly`.
 
 Resolve kit root from the product repo:
 
