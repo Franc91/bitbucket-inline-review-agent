@@ -9,6 +9,10 @@
   },
   "scripts": {
     "publish": "node scripts/publish-review.mjs",
-    "dry-run": "node scripts/publish-review.mjs --dry-run"
+    "dry-run": "node scripts/publish-review.mjs --dry-run",
+    "install:project": "node scripts/install.mjs",
+    "install:global": "node scripts/install.mjs --global",
+    "resolve-kit": "node scripts/resolve-kit-path.mjs",
+    "merge-mcp": "node scripts/merge-mcp.mjs"
   }
 }

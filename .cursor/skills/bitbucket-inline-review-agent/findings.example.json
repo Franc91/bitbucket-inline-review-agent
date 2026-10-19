@@ -1,0 +1,35 @@
+{
+  "ticket": "DP-123",
+  "verdict": "Request changes",
+  "summary": "PR partially matches the ticket; blocking issues below.",
+  "requestChanges": true,
+  "approve": false,
+  "findings": [
+    {
+      "severity": "Critical",
+      "path": "ui/src/views/example/Example.vue",
+      "line": 42,
+      "title": "Missing null guard",
+      "problem": "`item` can be null when the list is empty, which throws on render.",
+      "solution": "Use optional chaining or an early return: `if (!item) return null` before accessing `item.id`."
+    },
+    {
+      "severity": "Warning",
+      "path": "src/modules/example/example.service.ts",
+      "line": 88,
+      "title": "N+1 query risk",
+      "problem": "Loop calls repository.findOne for each id.",
+      "solution": "Load all ids in one `In([...])` query, then map in memory."
+    },
+    {
+      "severity": "Warning",
+      "category": "cross-task",
+      "relatedJiraKey": "DP-999",
+      "path": "ui/src/views/example/Example.vue",
+      "line": 10,
+      "title": "Scope matches another Jira task",
+      "problem": "This change implements behaviour described on DP-999 (In Progress), but the PR is for DP-123 only.",
+      "solution": "Split into a separate PR linked to DP-999, or extend the PR title/description and Jira links to include DP-999."
+    }
+  ]
+}

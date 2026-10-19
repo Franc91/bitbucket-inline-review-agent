@@ -1,0 +1,4 @@
+{
+  "codeWorkspace": "C:\\path\\to\\your\\product\\code",
+  "_comment": "Copy to install.config.json (gitignored). Absolute path to the repo where .cursor/ lives (e.g. dealer-platform code/ or VueNestJs Agent target)."
+}

@@ -20,6 +20,16 @@
       "title": "N+1 query risk",
       "problem": "Loop calls repository.findOne for each id.",
       "solution": "Load all ids in one `In([...])` query, then map in memory."
+    },
+    {
+      "severity": "Warning",
+      "category": "cross-task",
+      "relatedJiraKey": "DP-999",
+      "path": "ui/src/views/example/Example.vue",
+      "line": 10,
+      "title": "Scope matches another Jira task",
+      "problem": "This change implements behaviour described on DP-999 (In Progress), but the PR is for DP-123 only.",
+      "solution": "Split into a separate PR linked to DP-999, or extend the PR title/description and Jira links to include DP-999."
     }
   ]
 }

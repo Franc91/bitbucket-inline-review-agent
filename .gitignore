@@ -5,6 +5,7 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+install.config.json
 tmp/
 .findings*.json
 .publish-result.json

@@ -3,5 +3,6 @@
   "repoSlug": "dealer-platform",
   "jiraCloudId": "projectjakartaltd.atlassian.net",
   "jiraProject": "DP",
+  "jiraCrossTaskMaxRelated": 8,
   "prUrlTemplate": "https://bitbucket.org/{workspace}/{repoSlug}/pull-requests/{id}"
 }

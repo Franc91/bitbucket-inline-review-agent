@@ -14,14 +14,15 @@ Each published inline comment must be actionable and short.
 
 | Severity | Icon |
 | -------- | ---- |
-| Critical | 🔴 |
-| Warning | 🟡 |
-| Suggestion | 🟢 |
+| Must fix | 🔴 |
+| Should fix | 🟡 |
+| Nit- | 🟢 |
 
 ## Rules
 
 - One finding → one inline comment.
-- Problem and Solution in the **user’s language**.
+- **Cross-task** (`category: cross-task`): name the **related Jira key** in Problem; tie to a concrete line when the bleed is localized.
+- Problem and Solution in **English** (unless the user asks otherwise). Chat report may stay in the user's language.
 - Solution should be the recommended approach, not three vague alternatives.
 - Do not paste huge code blocks; 3–8 lines max if needed.
 - Do not shame the author; stay factual.
@@ -30,7 +31,7 @@ Each published inline comment must be actionable and short.
 ## Example (Polish)
 
 ```markdown
-**🔴 Critical** — Brak guarda na null
+**🔴 Must fix** — Brak guarda na null
 
 **Problem:** Przy pustej liście `item` jest `null` i komponent rzuca przy `item.id`.
 
